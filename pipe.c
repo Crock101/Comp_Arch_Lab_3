@@ -47,7 +47,7 @@ uint32_t SubU(uint32_t reg_1, uint32_t reg_2);
 int32_t SLT(int32_t reg_1, int32_t reg_2);
 uint32_t SLTU(uint32_t reg_1, uint32_t reg_2);
 uint32_t LU(uint32_t reg_2);
-uint32_t OR(uint32_t reg_1, uint32_t reg_2, bool immd);
+uint32_t OR(uint32_t reg_1, uint32_t reg_2);
 uint32_t MEM(uint32_t reg_1, int32_t reg_2);
 
 //If after the fetch stage encounters an instruction that it doesn't recognize, and or no instructions,
