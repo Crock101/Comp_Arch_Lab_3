@@ -47,6 +47,7 @@ typedef struct Pipe_Reg_DEtoEX {
     // Write back control values
     bool RegWrite;
     bool MemtoReg;
+    bool DataPathStop;
 
     // Memory control values
     bool MemRead;
@@ -79,6 +80,7 @@ typedef struct Pipe_Reg_EXtoMEM {
     // Write back control values
     bool RegWrite;
     bool MemtoReg;
+    bool DataPathStop;
 
     // Memory control values
     //bool Branch;
@@ -101,6 +103,7 @@ typedef struct Pipe_Reg_MEMtoWB {
     // Write back control values
     bool RegWrite;
     bool MemtoReg;
+    bool DataPathStop;
 
     uint32_t Read_Data;
     uint32_t ALU_Result;

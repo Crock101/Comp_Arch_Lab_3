@@ -50,10 +50,6 @@ uint32_t LU(uint32_t reg_2);
 uint32_t OR(uint32_t reg_1, uint32_t reg_2);
 uint32_t MEM(uint32_t reg_1, int32_t reg_2);
 
-//If after the fetch stage encounters an instruction that it doesn't recognize, and or no instructions,
-//the pipeline will run until this equals zero.
-int stages_till_empty;
-
 bool PC_Write;
 bool Branch;
 uint32_t Branch_PC;
@@ -78,8 +74,6 @@ Pipe_Reg_MEMtoWB MEMtoWB;
 
 void pipe_init()
 {
-    stages_till_empty = 3;
-
     PC_Write = true;
 
     Branch = false;
@@ -108,6 +102,7 @@ void pipe_init()
     DEtoEX.rs_Num = 0;
     DEtoEX.rt_Num = 0;
     DEtoEX.rd_Num = 0;
+    DEtoEX.DataPathStop = false;
 
     //Clear the EXtoMEM reg
     EXtoMEM.RegWrite = false;
@@ -137,9 +132,13 @@ void pipe_cycle()
 }
 
 
-
 void pipe_stage_wb()
 {
+    if (MEMtoWB.DataPathStop)
+    {
+        RUN_BIT = 0;
+    }
+
     if (MEMtoWB.RegWrite)
     {
         if (MEMtoWB.MemtoReg)
@@ -159,6 +158,9 @@ void pipe_stage_mem()
     //Forwarding values to the next stage
     MEMtoWB.ALU_Result = EXtoMEM.ALU_Result;
     MEMtoWB.Reg_Rd = EXtoMEM.Reg_Rd;
+    MEMtoWB.RegWrite = EXtoMEM.RegWrite;
+    MEMtoWB.MemtoReg = EXtoMEM.MemtoReg;
+    MEMtoWB.DataPathStop = EXtoMEM.DataPathStop;
 
 
     //Data memory segment
@@ -178,23 +180,6 @@ void pipe_stage_mem()
 
 void pipe_stage_execute()
 {
-    // Forwarding control values
-    EXtoMEM.RegWrite = DEtoEX.RegWrite;
-    EXtoMEM.MemtoReg = DEtoEX.MemtoReg;
-
-    EXtoMEM.MemRead = DEtoEX.MemRead;
-    EXtoMEM.MemWrite = DEtoEX.MemWrite;
-
-    //Write-back regester selection
-    if (DEtoEX.RegDst)
-    {
-        EXtoMEM..Reg_Rd = DEtoEX.rd_Num;
-    }
-    else
-    {
-        EXtoMEM..Reg_Rd = DEtoEX.rt_Num;
-    }
-
     //ALU operation
 
     //If an ALU op is going to occur.
@@ -229,7 +214,7 @@ void pipe_stage_execute()
             DEtoEX.Reg_2 = EXtoMEM.ALU_Result;
         }
         //Reg 2 MEM forwarding
-        else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == DEtoEX.rs_Num)\)
+        else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == DEtoEX.rs_Num))
         {
             DEtoEX.Reg_1 = WBValue;
         }
@@ -298,6 +283,23 @@ void pipe_stage_execute()
     {
         EXtoMEM.ALU_Result = 0;
     }
+
+    // Forwarding control values
+    EXtoMEM.RegWrite = DEtoEX.RegWrite;
+    EXtoMEM.MemtoReg = DEtoEX.MemtoReg;
+    EXtoMEM.MemRead = DEtoEX.MemRead;
+    EXtoMEM.MemWrite = DEtoEX.MemWrite;
+    EXtoMEM.DataPathStop = DEtoEX.DataPathStop;
+
+    //Write-back regester selection
+    if (DEtoEX.RegDst)
+    {
+        EXtoMEM.Reg_Rd = DEtoEX.rd_Num;
+    }
+    else
+    {
+        EXtoMEM.Reg_Rd = DEtoEX.rt_Num;
+    }
     
 }
 
@@ -345,8 +347,10 @@ void pipe_stage_decode()
         int32_t immediate = (0xffff)&(IFtoDE.Instruction);
 
         //If the immediate value is negative, sign extend it.
-        if (((immediate >> 15) & 0x1) == 1)
+        if ((((immediate >> 15) & 0x1) == 1) && opcode != DECODE_ORI)
+        {
             immediate = immediate | 0xffff0000;
+        }
 
         //address is equal to the lower 26 bits of the hex instruction
         uint32_t address = (0x3ffffff)&(IFtoDE.Instruction);
@@ -359,9 +363,9 @@ void pipe_stage_decode()
 
         //Determine which instruction is being performed and set the next stage's regester values appropriately
         //For the R type instructions, the opcode is stored in funct.
-        if (opcode == FUNCT)
+        if (opcode == DECODE_FUNCT)
         {
-            if (funct == ADD)
+            if (funct == DECODE_ADD)
             {
                 //Writing back to a register
                 DEtoEX.RegWrite = true;
@@ -394,7 +398,7 @@ void pipe_stage_decode()
                 DEtoEX.RegDst = true;
 
             }
-            else if (funct == ADDU)
+            else if (funct == DECODE_ADDU)
             {
                 //Writing back to a register
                 DEtoEX.RegWrite = true;
@@ -426,7 +430,7 @@ void pipe_stage_decode()
                 //Writing back to RD
                 DEtoEX.RegDst = true;
             }
-            else if (funct == SUB)
+            else if (funct == DECODE_SUB)
             {
                 //Writing back to a register
                 DEtoEX.RegWrite = true;
@@ -458,7 +462,7 @@ void pipe_stage_decode()
                 //Writing back to RD
                 DEtoEX.RegDst = true;
             }
-            else if (funct == SUBU)
+            else if (funct == DECODE_SUBU)
             {
                 //Writing back to a register
                 DEtoEX.RegWrite = true;
@@ -490,7 +494,7 @@ void pipe_stage_decode()
                 //Writing back to RD
                 DEtoEX.RegDst = true;
             }
-            else if (funct == SLT)
+            else if (funct == DECODE_SLT)
             {
                 //Writing back to a register
                 DEtoEX.RegWrite = true;
@@ -522,7 +526,7 @@ void pipe_stage_decode()
                 //Writing back to RD
                 DEtoEX.RegDst = true;
             }
-            else if (funct == SLTU)
+            else if (funct == DECODE_SLTU)
             {
                 //Writing back to a register
                 DEtoEX.RegWrite = true;
@@ -555,9 +559,13 @@ void pipe_stage_decode()
                 DEtoEX.RegDst = true;
             }
             else
-            {
-                //Decrease the number of stages until the datapath is empty.
-                stages_till_empty--;
+            {                         
+                if(IFtoDE.PC != 0)
+                {
+                    DEtoEX.DataPathStop = true;
+                    PC_Write = false;
+                    IFtoDE.IFtoDE_Write = false;
+                }
 
                 //Clear the control values.
                 DEtoEX.RegWrite = false;
@@ -565,15 +573,9 @@ void pipe_stage_decode()
                 DEtoEX.MemRead = false;
                 DEtoEX.MemWrite = false;
                 DEtoEX.ALUOperation = EXECUTE_NO_OP;
-
-                //If the datapath is empty, halt the simulation
-                if (stages_till_empty == 0)
-                {
-                    RUN_BIT = 0;
-                }
             }
         }
-        else if (opcode == LUI)
+        else if (opcode == DECODE_LUI)
         {
             //Writing back to a register
             DEtoEX.RegWrite = true;
@@ -599,10 +601,10 @@ void pipe_stage_decode()
             //Writing back to RT
             DEtoEX.RegDst = false;
         }
-        else if (opcode == ORI)
+        else if (opcode == DECODE_ORI)
         {
             //Clear the sign extention of the immediate value
-            immediate = immediate & 0x0000ffff;
+            //immediate = immediate & 0xffff;
             
             //Writing back to a register
             DEtoEX.RegWrite = true;
@@ -628,7 +630,7 @@ void pipe_stage_decode()
             //Writing back to Rt
             DEtoEX.RegDst = false;
         }
-        else if (opcode == ADDI)
+        else if (opcode == DECODE_ADDI)
         {
             //Writing back to a register
             DEtoEX.RegWrite = true;
@@ -657,7 +659,7 @@ void pipe_stage_decode()
             //Writing back to Rt
             DEtoEX.RegDst = false;
         }
-        else if (opcode == ADDIU)
+        else if (opcode == DECODE_ADDIU)
         {
             //Writing back to a register
             DEtoEX.RegWrite = true;
@@ -687,7 +689,7 @@ void pipe_stage_decode()
             DEtoEX.RegDst = false;
 
         }
-        else if (opcode == LW)
+        else if (opcode == DECODE_LW)
         {
             //Writing back to a register
             DEtoEX.RegWrite = true;
@@ -713,7 +715,7 @@ void pipe_stage_decode()
             //Writing back to RT
             DEtoEX.RegDst = false;
         }
-        else if (opcode == SW)
+        else if (opcode == DECODE_SW)
         {
             //Not writing back to a register
             DEtoEX.RegWrite = false;
@@ -733,7 +735,7 @@ void pipe_stage_decode()
             //RS is reg 1
             DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
         }
-        else if (opcode == BNE)
+        else if (opcode == DECODE_BNE)
         {
             //If the branch is being taken
             if (CURRENT_STATE.REGS[rs] != CURRENT_STATE.REGS[rt])
@@ -762,7 +764,7 @@ void pipe_stage_decode()
             DEtoEX.ALUOperation = EXECUTE_NO_OP;
 
         }
-        else if (opcode == BEQ)
+        else if (opcode == DECODE_BEQ)
         {
             //If the branch is being taken
             if (CURRENT_STATE.REGS[rs] == CURRENT_STATE.REGS[rt])
@@ -790,7 +792,7 @@ void pipe_stage_decode()
             DEtoEX.MemWrite = false;
             DEtoEX.ALUOperation = EXECUTE_NO_OP;
         }
-        else if (opcode == BGTZ)
+        else if (opcode == DECODE_BGTZ)
         {
             //If the branch is being taken
             if (CURRENT_STATE.REGS[rs] > CURRENT_STATE.REGS[0])
@@ -818,7 +820,7 @@ void pipe_stage_decode()
             DEtoEX.MemWrite = false;
             DEtoEX.ALUOperation = EXECUTE_NO_OP;
         }
-        else if (opcode == SLTI)
+        else if (opcode == DECODE_SLTI)
         {
             //Writing back to a register
             DEtoEX.RegWrite = true;
@@ -847,7 +849,7 @@ void pipe_stage_decode()
             //Writing back to Rt
             DEtoEX.RegDst = false;
         }
-        else if (opcode == J)
+        else if (opcode == DECODE_J)
         {
             //Move the program counter to the label.
             CURRENT_STATE.PC = (CURRENT_STATE.PC & 0xf0000000) | (address << 2);
@@ -862,12 +864,12 @@ void pipe_stage_decode()
         }
         else
         {
-            //Decrease the number of stages until the datapath is empty.
-            stages_till_empty--;
-
-            //Insert a stall
-            PC_Write = false;
-            IFtoDE.IFtoDE_Write = false;
+            if (IFtoDE.PC != 0)
+            {
+                DEtoEX.DataPathStop = true;
+                PC_Write = false;
+                IFtoDE.IFtoDE_Write = false;
+            }
 
             //Clear the control values.
             DEtoEX.RegWrite = false;
@@ -876,11 +878,6 @@ void pipe_stage_decode()
             DEtoEX.MemWrite = false;
             DEtoEX.ALUOperation = EXECUTE_NO_OP;
 
-            //If the datapath is empty, halt the simulation
-            if (stages_till_empty == 0)
-            {
-                RUN_BIT = 0;
-            }
         }
 
         //If a load use hazard occurs
@@ -1265,12 +1262,7 @@ uint32_t LU(uint32_t reg_2)
  ***************************************************************/
 uint32_t OR(uint32_t reg_1, uint32_t reg_2)
 {
-    if (immd)
-    {
-        return reg_1 | (reg_2 & 0x0000ffff);
-    }
-
-    return reg_1 | reg_2;
+     return reg_1 | reg_2;
 }
 
 /***************************************************************
@@ -1291,5 +1283,5 @@ uint32_t OR(uint32_t reg_1, uint32_t reg_2)
  ***************************************************************/
 uint32_t MEM(uint32_t reg_1, int32_t reg_2)
 {
-    return reg_1+(reg_2<<2)
+    return reg_1 + (reg_2 << 2);
 }
