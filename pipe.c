@@ -1,7 +1,18 @@
-/*
- * MIPS pipeline timing simulator
+/**********************************************
  *
- */
+ * Program Title: Lab_3
+ *
+ * Program File Name: pipe.c
+ *
+ * Computer Architecture & Design EECE.4820-201
+ *
+ * Spring 2019
+ *
+ * Authors: Justice Graves and Colin Rockwood
+ *
+ * March 16th, 2019
+ *
+ **********************************************/
 
 #include "pipe.h"
 #include "shell.h"
