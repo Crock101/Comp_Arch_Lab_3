@@ -372,6 +372,21 @@ void pipe_stage_decode()
 
         DEtoEX.immediate = immediate;
 
+        //If a load use hazard occurs
+        if (DEtoEX.MemRead && ((DEtoEX.rt_Num == rs) || (DEtoEX.rt_Num == rt)))
+        {
+            //Insert a stall
+            PC_Write = false;
+            IFtoDE.IFtoDE_Write = false;
+
+            //Clear the control values.
+            DEtoEX.RegWrite = false;
+            DEtoEX.MemtoReg = false;
+            DEtoEX.MemRead = false;
+            DEtoEX.MemWrite = false;
+            DEtoEX.ALUOperation = EXECUTE_NO_OP;
+        }
+
         //Determine which instruction is being performed and set the next stage's regester values appropriately
         //For the R type instructions, the opcode is stored in funct.
         if (opcode == DECODE_FUNCT)
@@ -806,7 +821,7 @@ void pipe_stage_decode()
         else if (opcode == DECODE_BGTZ)
         {
             //If the branch is being taken
-            if (CURRENT_STATE.REGS[rs] > CURRENT_STATE.REGS[0])
+            if ((int)CURRENT_STATE.REGS[rs] > CURRENT_STATE.REGS[0])
             {
                 //Make the PC take the branch
                 Branch = true;
@@ -862,8 +877,14 @@ void pipe_stage_decode()
         }
         else if (opcode == DECODE_J)
         {
+            //Make the PC take the branch
+            Branch = true;
+
+            //Mark the next instruction to be flushed
+            IFtoDE.IFFlush = true;
+
             //Move the program counter to the label.
-            CURRENT_STATE.PC = (CURRENT_STATE.PC & 0xf0000000) | (address << 2);
+            Branch_PC = (IFtoDE.PC & 0xf0000000) | (address << 2);
 
             //Clear the control values.
             DEtoEX.RegWrite = false;
@@ -889,21 +910,6 @@ void pipe_stage_decode()
             DEtoEX.MemWrite = false;
             DEtoEX.ALUOperation = EXECUTE_NO_OP;
 
-        }
-
-        //If a load use hazard occurs
-        if (DEtoEX.MemRead && ((DEtoEX.rt_Num == rs) || (DEtoEX.rt_Num == rt)))
-        {
-            //Insert a stall
-            PC_Write = false;
-            IFtoDE.IFtoDE_Write = false;
-
-            //Clear the control values.
-            DEtoEX.RegWrite = false;
-            DEtoEX.MemtoReg = false;
-            DEtoEX.MemRead = false;
-            DEtoEX.MemWrite = false;
-            DEtoEX.ALUOperation = EXECUTE_NO_OP;
         }
     }
     
@@ -1278,7 +1284,7 @@ uint32_t OR(uint32_t reg_1, uint32_t reg_2)
 
 /***************************************************************
 
- Function: or
+ Function: MEM
 
  Purpose: Calculate the memory address
 
