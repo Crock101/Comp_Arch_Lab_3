@@ -385,6 +385,9 @@ void pipe_stage_decode()
             DEtoEX.MemRead = false;
             DEtoEX.MemWrite = false;
             DEtoEX.ALUOperation = EXECUTE_NO_OP;
+
+            //Don't let the rest of the funtion change the control values.
+            return;
         }
 
         //Determine which instruction is being performed and set the next stage's regester values appropriately
