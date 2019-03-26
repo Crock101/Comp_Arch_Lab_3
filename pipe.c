@@ -695,6 +695,9 @@ void pipe_stage_decode()
         }
         else if (opcode == DECODE_BNE)
         {
+            uint32_t R1 = CURRENT_STATE.REGS[rs];
+            uint32_t R2 = CURRENT_STATE.REGS[rt];
+
             //Reg 1 EX forwarding
             if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rs))
             {
@@ -715,7 +718,7 @@ void pipe_stage_decode()
             //Reg 1 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
             {
-                DEtoEX.Reg_1 = WBValue;
+                R1 = WBValue;
             }
 
             //Reg 2 EX forwarding
@@ -738,11 +741,11 @@ void pipe_stage_decode()
             //Reg 2 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rt))
             {
-                DEtoEX.Reg_2 = WBValue;
+                R2 = WBValue;
             }
 
             //If the branch is being taken
-            if (CURRENT_STATE.REGS[rs] != CURRENT_STATE.REGS[rt])
+            if (R1 != R2)
             {
                 //Make the PC take the branch
                 Branch = true;
@@ -770,6 +773,9 @@ void pipe_stage_decode()
         }
         else if (opcode == DECODE_BEQ)
         {
+            uint32_t R1 = CURRENT_STATE.REGS[rs];
+            uint32_t R2 = CURRENT_STATE.REGS[rt];
+
             //Reg 1 EX forwarding
             if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rs))
             {
@@ -790,7 +796,7 @@ void pipe_stage_decode()
             //Reg 1 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
             {
-                DEtoEX.Reg_1 = WBValue;
+                R1 = WBValue;
             }
 
             //Reg 2 EX forwarding
@@ -813,11 +819,11 @@ void pipe_stage_decode()
             //Reg 2 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rt))
             {
-                DEtoEX.Reg_2 = WBValue;
+                R2 = WBValue;
             }
 
             //If the branch is being taken
-            if (CURRENT_STATE.REGS[rs] == CURRENT_STATE.REGS[rt])
+            if (R1 == R2)
             {
                 //Make the PC take the branch
                 Branch = true;
@@ -844,6 +850,8 @@ void pipe_stage_decode()
         }
         else if (opcode == DECODE_BGTZ)
         {
+            uint32_t R1 = CURRENT_STATE.REGS[rs];
+
             //Reg 1 EX forwarding
             if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rs))
             {
@@ -864,34 +872,11 @@ void pipe_stage_decode()
             //Reg 1 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
             {
-                DEtoEX.Reg_1 = WBValue;
-            }
-
-            //Reg 2 EX forwarding
-            if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rt))
-            {
-                //Insert a stall
-                PC_Write = false;
-                IFtoDE.IFtoDE_Write = false;
-
-                //Clear the control values.
-                DEtoEX.RegWrite = false;
-                DEtoEX.MemtoReg = false;
-                DEtoEX.MemRead = false;
-                DEtoEX.MemWrite = false;
-                DEtoEX.ALUOperation = EXECUTE_NO_OP;
-
-                //Don't let the rest of the funtion change the control values.
-                return;
-            }
-            //Reg 2 MEM forwarding
-            else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rt))
-            {
-                DEtoEX.Reg_2 = WBValue;
+                R1 = WBValue;
             }
 
             //If the branch is being taken
-            if ((int)CURRENT_STATE.REGS[rs] > CURRENT_STATE.REGS[0])
+            if ((int)R1 > CURRENT_STATE.REGS[0])
             {
                 //Make the PC take the branch
                 Branch = true;
