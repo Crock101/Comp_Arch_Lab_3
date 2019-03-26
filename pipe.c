@@ -65,6 +65,7 @@ bool PC_Write;
 bool Branch;
 uint32_t Branch_PC;
 uint32_t Increament_PC;
+uint32_t WBValue;
 
 //The max value that an unsigned 32 bit int can hold
 #define MAX_UNSIGNED 0xffffffff
@@ -88,6 +89,8 @@ void pipe_init()
     PC_Write = true;
 
     Branch = false;
+
+    WBValue = 0;
 
     memset(&CURRENT_STATE, 0, sizeof(CPU_State));
     CURRENT_STATE.PC = 0x00400000;
@@ -156,10 +159,12 @@ void pipe_stage_wb()
         {
 
             CURRENT_STATE.REGS[MEMtoWB.Reg_Rd] = MEMtoWB.Read_Data;
+            WBValue = MEMtoWB.Read_Data;
             return;
         }
 
         CURRENT_STATE.REGS[MEMtoWB.Reg_Rd] = MEMtoWB.ALU_Result;
+        WBValue = MEMtoWB.ALU_Result;
 
     }
 }
@@ -196,27 +201,15 @@ void pipe_stage_execute()
     //If an ALU op is going to occur.
     if (DEtoEX.ALUOperation != EXECUTE_NO_OP)
     {
-        //Get the write back value
-        uint32_t WBValue;
-
-        if (MEMtoWB.MemtoReg)
-        {
-            WBValue = MEMtoWB.Read_Data;
-        }
-        else
-        {
-            WBValue = MEMtoWB.ALU_Result;
-        }
-
         //Reg 1 EX forwarding
         if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == DEtoEX.rs_Num))
         {
             DEtoEX.Reg_1 = EXtoMEM.ALU_Result;
         }
         //Reg 1 MEM forwarding
-        else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == DEtoEX.rt_Num))
+        else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == DEtoEX.rs_Num))
         {
-            DEtoEX.Reg_2 = WBValue;
+            DEtoEX.Reg_1 = WBValue;
         }
 
         //Reg 2 EX forwarding
@@ -225,9 +218,9 @@ void pipe_stage_execute()
             DEtoEX.Reg_2 = EXtoMEM.ALU_Result;
         }
         //Reg 2 MEM forwarding
-        else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == DEtoEX.rs_Num))
+        else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == DEtoEX.rt_Num))
         {
-            DEtoEX.Reg_1 = WBValue;
+            DEtoEX.Reg_2 = WBValue;
         }
 
         //Reg 2 value selection
@@ -766,6 +759,28 @@ void pipe_stage_decode()
         }
         else if (opcode == DECODE_BNE)
         {
+            //Reg 1 EX forwarding
+            if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rs))
+            {
+                DEtoEX.Reg_1 = EXtoMEM.ALU_Result;
+            }
+            //Reg 1 MEM forwarding
+            else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
+            {
+                DEtoEX.Reg_1 = WBValue;
+            }
+
+            //Reg 2 EX forwarding
+            if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rt))
+            {
+                DEtoEX.Reg_2 = EXtoMEM.ALU_Result;
+            }
+            //Reg 2 MEM forwarding
+            else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rt))
+            {
+                DEtoEX.Reg_2 = WBValue;
+            }
+
             //If the branch is being taken
             if (CURRENT_STATE.REGS[rs] != CURRENT_STATE.REGS[rt])
             {
@@ -795,6 +810,28 @@ void pipe_stage_decode()
         }
         else if (opcode == DECODE_BEQ)
         {
+            //Reg 1 EX forwarding
+            if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rs))
+            {
+                DEtoEX.Reg_1 = EXtoMEM.ALU_Result;
+            }
+            //Reg 1 MEM forwarding
+            else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
+            {
+                DEtoEX.Reg_1 = WBValue;
+            }
+
+            //Reg 2 EX forwarding
+            if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rt))
+            {
+                DEtoEX.Reg_2 = EXtoMEM.ALU_Result;
+            }
+            //Reg 2 MEM forwarding
+            else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rt))
+            {
+                DEtoEX.Reg_2 = WBValue;
+            }
+
             //If the branch is being taken
             if (CURRENT_STATE.REGS[rs] == CURRENT_STATE.REGS[rt])
             {
@@ -823,6 +860,28 @@ void pipe_stage_decode()
         }
         else if (opcode == DECODE_BGTZ)
         {
+            //Reg 1 EX forwarding
+            if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rs))
+            {
+                DEtoEX.Reg_1 = EXtoMEM.ALU_Result;
+            }
+            //Reg 1 MEM forwarding
+            else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
+            {
+                DEtoEX.Reg_1 = WBValue;
+            }
+
+            //Reg 2 EX forwarding
+            if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rt))
+            {
+                DEtoEX.Reg_2 = EXtoMEM.ALU_Result;
+            }
+            //Reg 2 MEM forwarding
+            else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rt))
+            {
+                DEtoEX.Reg_2 = WBValue;
+            }
+
             //If the branch is being taken
             if ((int)CURRENT_STATE.REGS[rs] > CURRENT_STATE.REGS[0])
             {
