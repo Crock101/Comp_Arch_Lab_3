@@ -10,7 +10,7 @@
  *
  * Authors: Justice Graves and Colin Rockwood
  *
- * March 16th, 2019
+ * March 25th, 2019
  *
  **********************************************/
 
@@ -20,69 +20,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-
- // Defintions of opcodes for instructions that are NOT functions
-#define DECODE_FUNCT	0x00
-// Definitions of opcodes for instructions that ARE functions
-#define DECODE_ADD	0x20
-#define DECODE_ADDU 0x21
-#define DECODE_SUB	0x22
-#define DECODE_SUBU 0x23
-#define DECODE_SLT	0x2a
-#define DECODE_SLTU 0x2b
-#define DECODE_LUI	0x0F
-#define DECODE_ORI	0x0d
-#define DECODE_ADDI 0x08
-#define DECODE_ADDIU 0x09
-#define DECODE_LW	0x23
-#define DECODE_SW	0x2b
-#define DECODE_BNE	0x05
-#define DECODE_BEQ	0x04
-#define DECODE_BGTZ 0x07
-#define DECODE_SLTI 0x0a
-#define DECODE_J 0x02
-
-//ALU opcodes
-#define EXECUTE_NO_OP 0x00
-#define EXECUTE_ADD 0x01
-#define EXECUTE_SUB 0x02
-#define EXECUTE_SLT 0x03
-#define EXECUTE_LU 0x04
-#define EXECUTE_OR 0x05
-#define EXECUTE_MEM 0x06
-
-int32_t Add(int32_t reg_1, int32_t reg_2);
-uint32_t AddU(uint32_t reg_1, uint32_t reg_2);
-int32_t Sub(int32_t reg_1, int32_t reg_2);
-uint32_t SubU(uint32_t reg_1, uint32_t reg_2);
-int32_t SLT(int32_t reg_1, int32_t reg_2);
-uint32_t SLTU(uint32_t reg_1, uint32_t reg_2);
-uint32_t LU(uint32_t reg_2);
-uint32_t OR(uint32_t reg_1, uint32_t reg_2);
-uint32_t MEM(uint32_t reg_1, int32_t reg_2);
-
-bool PC_Write;
-bool Branch;
-uint32_t Branch_PC;
-uint32_t Increament_PC;
-uint32_t WBValue;
-
-//The max value that an unsigned 32 bit int can hold
-#define MAX_UNSIGNED 0xffffffff
-
-//The max value that a signed 32 bit int can hold
-#define MAX_SIGNED 0x7fffffff
-
-//The min value that a signed 32 bit int can hold
-#define MIN_SIGNED 0xffffffff
-
-Pipe_Reg_IFtoDE IFtoDE;
-
-Pipe_Reg_DEtoEX DEtoEX;
-
-Pipe_Reg_EXtoMEM EXtoMEM;
-
-Pipe_Reg_MEMtoWB MEMtoWB;
 
 void pipe_init()
 {
@@ -144,7 +81,6 @@ void pipe_cycle()
 	pipe_stage_decode();
 	pipe_stage_fetch();
 }
-
 
 void pipe_stage_wb()
 {
@@ -762,7 +698,19 @@ void pipe_stage_decode()
             //Reg 1 EX forwarding
             if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rs))
             {
-                DEtoEX.Reg_1 = EXtoMEM.ALU_Result;
+                //Insert a stall
+                PC_Write = false;
+                IFtoDE.IFtoDE_Write = false;
+
+                //Clear the control values.
+                DEtoEX.RegWrite = false;
+                DEtoEX.MemtoReg = false;
+                DEtoEX.MemRead = false;
+                DEtoEX.MemWrite = false;
+                DEtoEX.ALUOperation = EXECUTE_NO_OP;
+
+                //Don't let the rest of the funtion change the control values.
+                return;
             }
             //Reg 1 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
@@ -773,7 +721,19 @@ void pipe_stage_decode()
             //Reg 2 EX forwarding
             if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rt))
             {
-                DEtoEX.Reg_2 = EXtoMEM.ALU_Result;
+                //Insert a stall
+                PC_Write = false;
+                IFtoDE.IFtoDE_Write = false;
+
+                //Clear the control values.
+                DEtoEX.RegWrite = false;
+                DEtoEX.MemtoReg = false;
+                DEtoEX.MemRead = false;
+                DEtoEX.MemWrite = false;
+                DEtoEX.ALUOperation = EXECUTE_NO_OP;
+
+                //Don't let the rest of the funtion change the control values.
+                return;
             }
             //Reg 2 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rt))
@@ -813,7 +773,19 @@ void pipe_stage_decode()
             //Reg 1 EX forwarding
             if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rs))
             {
-                DEtoEX.Reg_1 = EXtoMEM.ALU_Result;
+                //Insert a stall
+                PC_Write = false;
+                IFtoDE.IFtoDE_Write = false;
+
+                //Clear the control values.
+                DEtoEX.RegWrite = false;
+                DEtoEX.MemtoReg = false;
+                DEtoEX.MemRead = false;
+                DEtoEX.MemWrite = false;
+                DEtoEX.ALUOperation = EXECUTE_NO_OP;
+
+                //Don't let the rest of the funtion change the control values.
+                return;
             }
             //Reg 1 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
@@ -824,7 +796,19 @@ void pipe_stage_decode()
             //Reg 2 EX forwarding
             if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rt))
             {
-                DEtoEX.Reg_2 = EXtoMEM.ALU_Result;
+                //Insert a stall
+                PC_Write = false;
+                IFtoDE.IFtoDE_Write = false;
+
+                //Clear the control values.
+                DEtoEX.RegWrite = false;
+                DEtoEX.MemtoReg = false;
+                DEtoEX.MemRead = false;
+                DEtoEX.MemWrite = false;
+                DEtoEX.ALUOperation = EXECUTE_NO_OP;
+
+                //Don't let the rest of the funtion change the control values.
+                return;
             }
             //Reg 2 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rt))
@@ -863,7 +847,19 @@ void pipe_stage_decode()
             //Reg 1 EX forwarding
             if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rs))
             {
-                DEtoEX.Reg_1 = EXtoMEM.ALU_Result;
+                //Insert a stall
+                PC_Write = false;
+                IFtoDE.IFtoDE_Write = false;
+
+                //Clear the control values.
+                DEtoEX.RegWrite = false;
+                DEtoEX.MemtoReg = false;
+                DEtoEX.MemRead = false;
+                DEtoEX.MemWrite = false;
+                DEtoEX.ALUOperation = EXECUTE_NO_OP;
+
+                //Don't let the rest of the funtion change the control values.
+                return;
             }
             //Reg 1 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
@@ -874,7 +870,19 @@ void pipe_stage_decode()
             //Reg 2 EX forwarding
             if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rt))
             {
-                DEtoEX.Reg_2 = EXtoMEM.ALU_Result;
+                //Insert a stall
+                PC_Write = false;
+                IFtoDE.IFtoDE_Write = false;
+
+                //Clear the control values.
+                DEtoEX.RegWrite = false;
+                DEtoEX.MemtoReg = false;
+                DEtoEX.MemRead = false;
+                DEtoEX.MemWrite = false;
+                DEtoEX.ALUOperation = EXECUTE_NO_OP;
+
+                //Don't let the rest of the funtion change the control values.
+                return;
             }
             //Reg 2 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rt))
@@ -982,7 +990,8 @@ void pipe_stage_fetch()
     //Fetch the instruction that the program counter points to.
     uint32_t instruction = mem_read_32(CURRENT_STATE.PC);
 
-    Increament_PC = CURRENT_STATE.PC + 4;
+    //The PC after being inceamented by 4
+    uint32_t Increament_PC = CURRENT_STATE.PC + 4;
 
     //If the PC can be modified
     if (PC_Write)
@@ -1009,22 +1018,7 @@ void pipe_stage_fetch()
     }
 }
 
-/***************************************************************
 
- Function: add
-
- Purpose: Perform a signed addition on the two ALU inputs
-
- Inputs: 
-
- reg_1: The first 32 bit ALU input
- 
- reg_2: The second 32 bit ALU input
-
- Returns: The 32 bit ALU output.
-
- Date Modified: March 12nd, 2019
- ***************************************************************/
 int32_t Add(int32_t reg_1, int32_t reg_2)
 {
     int32_t result = reg_1 + reg_2;
@@ -1073,22 +1067,7 @@ int32_t Add(int32_t reg_1, int32_t reg_2)
     return result;
 }
 
-/***************************************************************
 
- Function: addu
-
- Purpose: Perform a unsigned addition on the two ALU inputs
-
- Inputs:
-
- reg_1: The first 32 bit ALU input
-
- reg_2: The second 32 bit ALU input
-
- Returns: The 32 bit ALU output.
-
- Date Modified: March 12nd, 2019
- ***************************************************************/
 uint32_t AddU(uint32_t reg_1, uint32_t reg_2)
 {
     uint32_t result = reg_1 + reg_2;
@@ -1122,22 +1101,7 @@ uint32_t AddU(uint32_t reg_1, uint32_t reg_2)
     return result;
 }
 
-/***************************************************************
 
- Function: sub
-
- Purpose: Perform a signed subtraction on the two ALU inputs
-
- Inputs:
-
- reg_1: The first 32 bit ALU input
-
- reg_2: The second 32 bit ALU input
-
- Returns: The 32 bit ALU output.
-
- Date Modified: March 12nd, 2019
- ***************************************************************/
 int32_t Sub(int32_t reg_1, int32_t reg_2)
 {
     int32_t result = reg_1 - reg_2;
@@ -1186,22 +1150,7 @@ int32_t Sub(int32_t reg_1, int32_t reg_2)
     return result;
 }
 
-/***************************************************************
 
- Function: subu
-
- Purpose: Perform a unsigned subtraction on the two ALU inputs
-
- Inputs:
-
- reg_1: The first 32 bit ALU input
-
- reg_2: The second 32 bit ALU input
-
- Returns: The 32 bit ALU output.
-
- Date Modified: March 12nd, 2019
- ***************************************************************/
 uint32_t SubU(uint32_t reg_1, uint32_t reg_2)
 {
     uint32_t result = reg_1 - reg_2;
@@ -1235,22 +1184,7 @@ uint32_t SubU(uint32_t reg_1, uint32_t reg_2)
     return result;
 }
 
-/***************************************************************
 
- Function: slt
-
- Purpose: Perform a signed set less than on the two ALU inputs
-
- Inputs:
-
- reg_1: The first 32 bit ALU input
-
- reg_2: The second 32 bit ALU input
-
- Returns: The 32 bit ALU output.
-
- Date Modified: March 12nd, 2019
- ***************************************************************/
 int32_t SLT(int32_t reg_1, int32_t reg_2)
 {
     //Clear the flags
@@ -1267,22 +1201,7 @@ int32_t SLT(int32_t reg_1, int32_t reg_2)
     return false;
 }
 
-/***************************************************************
 
- Function: sltu
-
- Purpose: Perform a unsigned set less than on the two ALU inputs
-
- Inputs:
-
- reg_1: The first 32 bit ALU input
-
- reg_2: The second 32 bit ALU input
-
- Returns: The 32 bit ALU output.
-
- Date Modified: March 12nd, 2019
- ***************************************************************/
 uint32_t SLTU(uint32_t reg_1, uint32_t reg_2)
 {
     //Clear the flags
@@ -1299,67 +1218,20 @@ uint32_t SLTU(uint32_t reg_1, uint32_t reg_2)
     return false;
 }
 
-/***************************************************************
 
- Function: lu
-
- Purpose: Perform a load upper on the second ALU input
-
- Inputs:
-
- reg_1: The first 32 bit ALU input
-
- reg_2: The second 32 bit ALU input
-
- Returns: The 32 bit ALU output.
-
- Date Modified: March 12nd, 2019
- ***************************************************************/
 uint32_t LU(uint32_t reg_2)
 {
     uint32_t result = reg_2;
     return (result << 16) & 0xffff0000;
 }
 
-/***************************************************************
 
- Function: or
-
- Purpose: Perform an or on the two ALU inputs
-
- Inputs:
-
- reg_1: The first 32 bit ALU input
-
- reg_2: The second 32 bit ALU input
-
- immd: If the immediate value is being used.
-
- Returns: The 32 bit ALU output.
-
- Date Modified: March 12nd, 2019
- ***************************************************************/
 uint32_t OR(uint32_t reg_1, uint32_t reg_2)
 {
      return reg_1 | reg_2;
 }
 
-/***************************************************************
 
- Function: MEM
-
- Purpose: Calculate the memory address
-
- Inputs:
-
- reg_1: The first 32 bit ALU input
-
- reg_2: The second 32 bit ALU input
-
- Returns: The 32 bit ALU output.
-
- Date Modified: March 12nd, 2019
- ***************************************************************/
 uint32_t MEM(uint32_t reg_1, int32_t reg_2)
 {
     return reg_1 + (reg_2 << 2);
