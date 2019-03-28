@@ -159,6 +159,9 @@ void pipe_stage_execute()
             DEtoEX.Reg_2 = WBValue;
         }
 
+        //Forward the second regester value to the next stage.
+        EXtoMEM.Reg_2 = DEtoEX.Reg_2;
+
         //Reg 2 value selection
         if (DEtoEX.ALUSrc)
         {
@@ -302,7 +305,7 @@ void pipe_stage_decode()
         DEtoEX.immediate = immediate;
 
         //If a load use hazard occurs
-        if (DEtoEX.MemRead && ((DEtoEX.rt_Num == rs) || (DEtoEX.rt_Num == rt)))
+        if (DEtoEX.MemRead && ((EXtoMEM.Reg_Rd == rs) || (EXtoMEM.Reg_Rd == rt)))
         {
             //Insert a stall
             PC_Write = false;
@@ -692,6 +695,9 @@ void pipe_stage_decode()
 
             //RS is reg 1
             DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+
+            //RT is reg 2
+            DEtoEX.Reg_2 = CURRENT_STATE.REGS[rt];
         }
         else if (opcode == DECODE_BNE)
         {
