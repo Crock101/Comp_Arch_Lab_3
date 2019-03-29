@@ -335,8 +335,6 @@ bool PC_Write;
 bool Branch;
 //The new PC from branch/jump instruction
 uint32_t Branch_PC;
-//The write-back value
-uint32_t WBValue;
 
 //Regester in between the IF and DE stages
 Pipe_Reg_IFtoDE IFtoDE;

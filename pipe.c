@@ -27,8 +27,6 @@ void pipe_init()
 
     Branch = false;
 
-    WBValue = 0;
-
     memset(&CURRENT_STATE, 0, sizeof(CPU_State));
     CURRENT_STATE.PC = 0x00400000;
 
@@ -95,12 +93,10 @@ void pipe_stage_wb()
         {
 
             CURRENT_STATE.REGS[MEMtoWB.Reg_Rd] = MEMtoWB.Read_Data;
-            WBValue = MEMtoWB.Read_Data;
             return;
         }
 
         CURRENT_STATE.REGS[MEMtoWB.Reg_Rd] = MEMtoWB.ALU_Result;
-        WBValue = MEMtoWB.ALU_Result;
 
     }
 }
@@ -145,7 +141,15 @@ void pipe_stage_execute()
         //Reg 1 MEM forwarding
         else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == DEtoEX.rs_Num))
         {
-            DEtoEX.Reg_1 = WBValue;
+            if (MEMtoWB.MemtoReg)
+            {
+                DEtoEX.Reg_1 = MEMtoWB.Read_Data;
+            }
+
+            else
+            {
+                DEtoEX.Reg_1 = MEMtoWB.ALU_Result;
+            }
         }
 
         //Reg 2 EX forwarding
@@ -156,7 +160,15 @@ void pipe_stage_execute()
         //Reg 2 MEM forwarding
         else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == DEtoEX.rt_Num))
         {
-            DEtoEX.Reg_2 = WBValue;
+            if (MEMtoWB.MemtoReg)
+            {
+                DEtoEX.Reg_2 = MEMtoWB.Read_Data;
+            }
+
+            else
+            {
+                DEtoEX.Reg_2 = MEMtoWB.ALU_Result;
+            }
         }
 
         //Forward the second regester value to the next stage.
@@ -724,7 +736,15 @@ void pipe_stage_decode()
             //Reg 1 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
             {
-                R1 = WBValue;
+                if (MEMtoWB.MemtoReg)
+                {
+                    R1 = MEMtoWB.Read_Data;
+                }
+
+                else
+                {
+                    R1 = MEMtoWB.ALU_Result;
+                }
             }
 
             //Reg 2 EX forwarding
@@ -747,7 +767,15 @@ void pipe_stage_decode()
             //Reg 2 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rt))
             {
-                R2 = WBValue;
+                if (MEMtoWB.MemtoReg)
+                {
+                    R2 = MEMtoWB.Read_Data;
+                }
+
+                else
+                {
+                    R2 = MEMtoWB.ALU_Result;
+                }
             }
 
             //If the branch is being taken
@@ -802,7 +830,15 @@ void pipe_stage_decode()
             //Reg 1 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
             {
-                R1 = WBValue;
+                if (MEMtoWB.MemtoReg)
+                {
+                    R1 = MEMtoWB.Read_Data;
+                }
+
+                else
+                {
+                    R1 = MEMtoWB.ALU_Result;
+                }
             }
 
             //Reg 2 EX forwarding
@@ -825,7 +861,15 @@ void pipe_stage_decode()
             //Reg 2 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rt))
             {
-                R2 = WBValue;
+                if (MEMtoWB.MemtoReg)
+                {
+                    R2 = MEMtoWB.Read_Data;
+                }
+
+                else
+                {
+                    R2 = MEMtoWB.ALU_Result;
+                }
             }
 
             //If the branch is being taken
@@ -878,7 +922,15 @@ void pipe_stage_decode()
             //Reg 1 MEM forwarding
             else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
             {
-                R1 = WBValue;
+                if (MEMtoWB.MemtoReg)
+                {
+                    R1 = MEMtoWB.Read_Data;
+                }
+
+                else
+                {
+                    R1 = MEMtoWB.ALU_Result;
+                }
             }
 
             //If the branch is being taken
