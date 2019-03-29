@@ -30,45 +30,46 @@ void pipe_init()
     memset(&CURRENT_STATE, 0, sizeof(CPU_State));
     CURRENT_STATE.PC = 0x00400000;
 
-    //Clear the IFtoDE reg
-    IFtoDE.PC = 0;
-    IFtoDE.Instruction = 0;
-    IFtoDE.IFFlush = false; 
-    IFtoDE.IFtoDE_Write = false;
+    //Clear input of the IFtoDE reg
+    IFtoDEin.PC = 0;
+    IFtoDEin.Instruction = 0;
+    IFtoDEin.IFFlush = false; 
+    IFtoDEin.IFtoDE_Write = false;
 
-    //Clear the DEtoEX reg
-    DEtoEX.RegWrite = false;
-    DEtoEX.MemtoReg = false;
-    DEtoEX.MemRead = false;
-    DEtoEX.MemWrite = false;
-    DEtoEX.RegDst = false;
-    DEtoEX.Unsigned = false;
-    DEtoEX.ALUOperation = 0;
-    DEtoEX.ALUSrc = false;
-    DEtoEX.Reg_1 = 0;
-    DEtoEX.Reg_2 = 0;
-    DEtoEX.immediate = 0;
-    DEtoEX.rs_Num = 0;
-    DEtoEX.rt_Num = 0;
-    DEtoEX.rd_Num = 0;
-    DEtoEX.DataPathStop = false;
+    //Clear the input of the DEtoEX reg
+    DEtoEXin.RegWrite = false;
+    DEtoEXin.MemtoReg = false;
+    DEtoEXin.MemRead = false;
+    DEtoEXin.MemWrite = false;
+    DEtoEXin.RegDst = false;
+    DEtoEXin.Unsigned = false;
+    DEtoEXin.ALUOperation = 0;
+    DEtoEXin.ALUSrc = false;
+    DEtoEXin.Reg_1 = 0;
+    DEtoEXin.Reg_2 = 0;
+    DEtoEXin.immediate = 0;
+    DEtoEXin.rs_Num = 0;
+    DEtoEXin.rt_Num = 0;
+    DEtoEXin.rd_Num = 0;
+    DEtoEXin.DataPathStop = false;
 
     //Clear the EXtoMEM reg
-    EXtoMEM.RegWrite = false;
-    EXtoMEM.MemtoReg = false;
-    EXtoMEM.MemWrite = false;
-    EXtoMEM.MemRead = false;
-    EXtoMEM.ALU_Result = 0;
-    EXtoMEM.Reg_2 = 0;
-    EXtoMEM.Reg_Rd = 0;
+    EXtoMEMin.RegWrite = false;
+    EXtoMEMin.MemtoReg = false;
+    EXtoMEMin.MemWrite = false;
+    EXtoMEMin.MemRead = false;
+    EXtoMEMin.ALU_Result = 0;
+    EXtoMEMin.Reg_2 = 0;
+    EXtoMEMin.Reg_Rd = 0;
+    EXtoMEMin.DataPathStop = false;
 
     //Clear the MEMtoWB reg
-    MEMtoWB.RegWrite = false;
-    MEMtoWB.MemtoReg = false;
-    MEMtoWB.Read_Data = 0;
-    MEMtoWB.ALU_Result = 0;
-    MEMtoWB.Reg_Rd = 0;
-
+    MEMtoWBin.RegWrite = false;
+    MEMtoWBin.MemtoReg = false;
+    MEMtoWBin.Read_Data = 0;
+    MEMtoWBin.ALU_Result = 0;
+    MEMtoWBin.Reg_Rd = 0;
+    EXtoMEMin.DataPathStop = false;
 }
 
 void pipe_cycle()
@@ -82,196 +83,236 @@ void pipe_cycle()
 
 void pipe_stage_wb()
 {
-    if (MEMtoWB.DataPathStop)
+    //Make the MEMtoWB reg output equal to the input
+    MEMtoWBout.RegWrite = MEMtoWBin.RegWrite;
+    MEMtoWBout.MemtoReg = MEMtoWBin.MemtoReg;
+    MEMtoWBout.Read_Data = MEMtoWBin.Read_Data;
+    MEMtoWBout.ALU_Result = MEMtoWBin.ALU_Result;
+    MEMtoWBout.Reg_Rd = MEMtoWBin.Reg_Rd;
+    MEMtoWBout.DataPathStop = MEMtoWBin.DataPathStop;
+
+    if (MEMtoWBout.DataPathStop)
     {
         RUN_BIT = 0;
     }
 
-    if (MEMtoWB.RegWrite)
+    if (MEMtoWBout.RegWrite)
     {
-        if (MEMtoWB.MemtoReg)
+        if (MEMtoWBout.MemtoReg)
         {
-
-            CURRENT_STATE.REGS[MEMtoWB.Reg_Rd] = MEMtoWB.Read_Data;
+            CURRENT_STATE.REGS[MEMtoWBout.Reg_Rd] = MEMtoWBout.Read_Data;
             return;
         }
 
-        CURRENT_STATE.REGS[MEMtoWB.Reg_Rd] = MEMtoWB.ALU_Result;
+        CURRENT_STATE.REGS[MEMtoWBout.Reg_Rd] = MEMtoWBout.ALU_Result;
 
     }
 }
 
 void pipe_stage_mem()
 {
-    //Forwarding values to the next stage
-    MEMtoWB.ALU_Result = EXtoMEM.ALU_Result;
-    MEMtoWB.Reg_Rd = EXtoMEM.Reg_Rd;
-    MEMtoWB.RegWrite = EXtoMEM.RegWrite;
-    MEMtoWB.MemtoReg = EXtoMEM.MemtoReg;
-    MEMtoWB.DataPathStop = EXtoMEM.DataPathStop;
+    //Make the EXtoMEM reg output equal to the input
+    EXtoMEMout.RegWrite = EXtoMEMin.RegWrite;
+    EXtoMEMout.MemtoReg = EXtoMEMin.MemtoReg;
+    EXtoMEMout.MemWrite = EXtoMEMin.MemWrite;
+    EXtoMEMout.MemRead = EXtoMEMin.MemRead;
+    EXtoMEMout.ALU_Result = EXtoMEMin.ALU_Result;
+    EXtoMEMout.Reg_2 = EXtoMEMin.Reg_2;
+    EXtoMEMout.Reg_Rd = EXtoMEMin.Reg_Rd;
+    EXtoMEMout.DataPathStop = EXtoMEMin.DataPathStop;
 
+    //Forwarding values to the next stage
+    MEMtoWBin.ALU_Result = EXtoMEMout.ALU_Result;
+    MEMtoWBin.Reg_Rd = EXtoMEMout.Reg_Rd;
+    MEMtoWBin.RegWrite = EXtoMEMout.RegWrite;
+    MEMtoWBin.MemtoReg = EXtoMEMout.MemtoReg;
+    MEMtoWBin.DataPathStop = EXtoMEMout.DataPathStop;
 
     //Data memory segment
 
     //Reading data from memory?
-    if (EXtoMEM.MemRead)
+    if (EXtoMEMout.MemRead)
     {
-        MEMtoWB.Read_Data = mem_read_32(EXtoMEM.ALU_Result);
+        MEMtoWBin.Read_Data = mem_read_32(EXtoMEMout.ALU_Result);
     }
 
     //Writing data to memory?
-    else if(EXtoMEM.MemWrite)
+    else if(EXtoMEMout.MemWrite)
     {
-        mem_write_32(EXtoMEM.ALU_Result, EXtoMEM.Reg_2);
+        mem_write_32(EXtoMEMout.ALU_Result, EXtoMEMout.Reg_2);
     }
 }
 
 void pipe_stage_execute()
 {
+    //Make the DEtoEX reg output equal to the input
+    DEtoEXout.RegWrite = DEtoEXin.RegWrite;
+    DEtoEXout.MemtoReg = DEtoEXin.MemtoReg;
+    DEtoEXout.MemRead = DEtoEXin.MemRead;
+    DEtoEXout.MemWrite = DEtoEXin.MemWrite;
+    DEtoEXout.RegDst = DEtoEXin.RegDst;
+    DEtoEXout.Unsigned = DEtoEXin.Unsigned;
+    DEtoEXout.ALUOperation = DEtoEXin.ALUOperation;
+    DEtoEXout.ALUSrc = DEtoEXin.ALUSrc;
+    DEtoEXout.Reg_1 = DEtoEXin.Reg_1;
+    DEtoEXout.Reg_2 = DEtoEXin.Reg_2;
+    DEtoEXout.immediate = DEtoEXin.immediate;
+    DEtoEXout.rs_Num = DEtoEXin.rs_Num;
+    DEtoEXout.rt_Num = DEtoEXin.rt_Num;
+    DEtoEXout.rd_Num = DEtoEXin.rd_Num;
+    DEtoEXout.DataPathStop = DEtoEXin.DataPathStop;
+
     //ALU operation
 
     //If an ALU op is going to occur.
-    if (DEtoEX.ALUOperation != EXECUTE_NO_OP)
+    if (DEtoEXout.ALUOperation != EXECUTE_NO_OP)
     {
         //Reg 1 EX forwarding
-        if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == DEtoEX.rs_Num))
+        if (EXtoMEMout.RegWrite && (EXtoMEMout.Reg_Rd != 0) && (EXtoMEMout.Reg_Rd == DEtoEXout.rs_Num))
         {
-            DEtoEX.Reg_1 = EXtoMEM.ALU_Result;
+            DEtoEXout.Reg_1 = EXtoMEMout.ALU_Result;
         }
         //Reg 1 MEM forwarding
-        else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == DEtoEX.rs_Num))
+        else if (MEMtoWBout.RegWrite && (MEMtoWBout.Reg_Rd != 0) && (MEMtoWBout.Reg_Rd == DEtoEXout.rs_Num))
         {
-            if (MEMtoWB.MemtoReg)
+            if (MEMtoWBout.MemtoReg)
             {
-                DEtoEX.Reg_1 = MEMtoWB.Read_Data;
+                DEtoEXout.Reg_1 = MEMtoWBout.Read_Data;
             }
 
             else
             {
-                DEtoEX.Reg_1 = MEMtoWB.ALU_Result;
+                DEtoEXout.Reg_1 = MEMtoWBout.ALU_Result;
             }
         }
 
         //Reg 2 EX forwarding
-        if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == DEtoEX.rt_Num))
+        if (EXtoMEMout.RegWrite && (EXtoMEMout.Reg_Rd != 0) && (EXtoMEMout.Reg_Rd == DEtoEXout.rt_Num))
         {
-            DEtoEX.Reg_2 = EXtoMEM.ALU_Result;
+            DEtoEXout.Reg_2 = EXtoMEMout.ALU_Result;
         }
         //Reg 2 MEM forwarding
-        else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == DEtoEX.rt_Num))
+        else if (MEMtoWBout.RegWrite && (MEMtoWBout.Reg_Rd != 0) && (MEMtoWBout.Reg_Rd == DEtoEXout.rt_Num))
         {
-            if (MEMtoWB.MemtoReg)
+            if (MEMtoWBout.MemtoReg)
             {
-                DEtoEX.Reg_2 = MEMtoWB.Read_Data;
+                DEtoEXout.Reg_2 = MEMtoWBout.Read_Data;
             }
 
             else
             {
-                DEtoEX.Reg_2 = MEMtoWB.ALU_Result;
+                DEtoEXout.Reg_2 = MEMtoWBout.ALU_Result;
             }
         }
 
         //Forward the second regester value to the next stage.
-        EXtoMEM.Reg_2 = DEtoEX.Reg_2;
+        EXtoMEMin.Reg_2 = DEtoEXout.Reg_2;
 
         //Reg 2 value selection
-        if (DEtoEX.ALUSrc)
+        if (DEtoEXout.ALUSrc)
         {
-            DEtoEX.Reg_2 = DEtoEX.immediate;
+            DEtoEXout.Reg_2 = DEtoEXout.immediate;
         }
 
 
-        if (DEtoEX.ALUOperation == EXECUTE_ADD)
+        if (DEtoEXout.ALUOperation == EXECUTE_ADD)
         {
-            if (DEtoEX.Unsigned)
+            if (DEtoEXout.Unsigned)
             {
-                EXtoMEM.ALU_Result = AddU(DEtoEX.Reg_1, DEtoEX.Reg_2);
+                EXtoMEMin.ALU_Result = AddU(DEtoEXout.Reg_1, DEtoEXout.Reg_2);
             }
             else
             {
-                EXtoMEM.ALU_Result = Add(DEtoEX.Reg_1, DEtoEX.Reg_2);
+                EXtoMEMin.ALU_Result = Add(DEtoEXout.Reg_1, DEtoEXout.Reg_2);
             }
         }
 
-        else if (DEtoEX.ALUOperation == EXECUTE_SUB)
+        else if (DEtoEXout.ALUOperation == EXECUTE_SUB)
         {
-            if (DEtoEX.Unsigned)
+            if (DEtoEXout.Unsigned)
             {
-                EXtoMEM.ALU_Result = SubU(DEtoEX.Reg_1, DEtoEX.Reg_2);
+                EXtoMEMin.ALU_Result = SubU(DEtoEXout.Reg_1, DEtoEXout.Reg_2);
             }
             else
             {
-                EXtoMEM.ALU_Result = Sub(DEtoEX.Reg_1, DEtoEX.Reg_2);
+                EXtoMEMin.ALU_Result = Sub(DEtoEXout.Reg_1, DEtoEXout.Reg_2);
             }
         }
 
-        else if (DEtoEX.ALUOperation == EXECUTE_SLT)
+        else if (DEtoEXout.ALUOperation == EXECUTE_SLT)
         {
-            if (DEtoEX.Unsigned)
+            if (DEtoEXout.Unsigned)
             {
-                EXtoMEM.ALU_Result = SLTU(DEtoEX.Reg_1, DEtoEX.Reg_2);
+                EXtoMEMin.ALU_Result = SLTU(DEtoEXout.Reg_1, DEtoEXout.Reg_2);
             }
             else
             {
-                EXtoMEM.ALU_Result = SLT(DEtoEX.Reg_1, DEtoEX.Reg_2);
+                EXtoMEMin.ALU_Result = SLT(DEtoEXout.Reg_1, DEtoEXout.Reg_2);
             }
         }
 
-        else if (DEtoEX.ALUOperation == EXECUTE_LU)
+        else if (DEtoEXout.ALUOperation == EXECUTE_LU)
         {
-            EXtoMEM.ALU_Result = LU(DEtoEX.Reg_2);
+            EXtoMEMin.ALU_Result = LU(DEtoEXout.Reg_2);
         }
 
-        else if (DEtoEX.ALUOperation == EXECUTE_OR)
+        else if (DEtoEXout.ALUOperation == EXECUTE_OR)
         {
-            EXtoMEM.ALU_Result = OR(DEtoEX.Reg_1, DEtoEX.Reg_2);
+            EXtoMEMin.ALU_Result = OR(DEtoEXout.Reg_1, DEtoEXout.Reg_2);
         }
 
-        else if (DEtoEX.ALUOperation == EXECUTE_MEM)
+        else if (DEtoEXout.ALUOperation == EXECUTE_MEM)
         {
-            EXtoMEM.ALU_Result = MEM(DEtoEX.Reg_1, DEtoEX.Reg_2);
+            EXtoMEMin.ALU_Result = MEM(DEtoEXout.Reg_1, DEtoEXout.Reg_2);
         }
     }
 
     //A no-op must be occuring, clear the ALU result.
     else
     {
-        EXtoMEM.ALU_Result = 0;
+        EXtoMEMin.ALU_Result = 0;
     }
 
     // Forwarding control values
-    EXtoMEM.RegWrite = DEtoEX.RegWrite;
-    EXtoMEM.MemtoReg = DEtoEX.MemtoReg;
-    EXtoMEM.MemRead = DEtoEX.MemRead;
-    EXtoMEM.MemWrite = DEtoEX.MemWrite;
-    EXtoMEM.DataPathStop = DEtoEX.DataPathStop;
+    EXtoMEMin.RegWrite = DEtoEXout.RegWrite;
+    EXtoMEMin.MemtoReg = DEtoEXout.MemtoReg;
+    EXtoMEMin.MemRead = DEtoEXout.MemRead;
+    EXtoMEMin.MemWrite = DEtoEXout.MemWrite;
+    EXtoMEMin.DataPathStop = DEtoEXout.DataPathStop;
 
     //Write-back regester selection
-    if (DEtoEX.RegDst)
+    if (DEtoEXout.RegDst)
     {
-        EXtoMEM.Reg_Rd = DEtoEX.rd_Num;
+        EXtoMEMin.Reg_Rd = DEtoEXout.rd_Num;
     }
     else
     {
-        EXtoMEM.Reg_Rd = DEtoEX.rt_Num;
+        EXtoMEMin.Reg_Rd = DEtoEXout.rt_Num;
     }
     
 }
 
 void pipe_stage_decode()
 {
+
+    //Make the IFtoDE reg output equal to the input
+    IFtoDEout.PC = IFtoDEin.PC;
+    IFtoDEout.Instruction = IFtoDEin.Instruction;
+    IFtoDEout.IFFlush = IFtoDEin.IFFlush;
+    IFtoDEout.IFtoDE_Write = IFtoDEin.IFtoDE_Write;
+
     //If the instruction was flushed
-    if (IFtoDE.IFFlush)
+    if (IFtoDEout.IFFlush)
     {
         //Clear the flush
-        IFtoDE.IFFlush = false;
+        IFtoDEin.IFFlush = false;
 
         //Clear the control values.
-        DEtoEX.RegWrite = false;
-        DEtoEX.MemtoReg = false;
-        DEtoEX.MemRead = false;
-        DEtoEX.MemWrite = false;
-        DEtoEX.ALUOperation = EXECUTE_NO_OP;
+        DEtoEXin.RegWrite = false;
+        DEtoEXin.MemtoReg = false;
+        DEtoEXin.MemRead = false;
+        DEtoEXin.MemWrite = false;
+        DEtoEXin.ALUOperation = EXECUTE_NO_OP;
     }
 
     //The instruction must not have been flushed
@@ -279,27 +320,27 @@ void pipe_stage_decode()
     {
         //Disable a previous stall
         PC_Write = true;
-        IFtoDE.IFtoDE_Write = true;
+        IFtoDEin.IFtoDE_Write = true;
 
         //Decode the instruction
 
         //The opcode is equal to the lower 6 bits of the hex instruction after it's shifted right 26 bits 
-        uint32_t opcode = (0x3f)&IFtoDE.Instruction >> 26;
+        uint32_t opcode = (0x3f)&IFtoDEout.Instruction >> 26;
 
         //rs is equal to the lower 5 bits of the hex instruction after it's shifted right 21 bits
-        uint32_t rs = (0x1f)&(IFtoDE.Instruction >> 21);
+        uint32_t rs = (0x1f)&(IFtoDEout.Instruction >> 21);
 
         //rt is equal to the lower 5 bits of the hex instruction after it's shifted right 16 bits
-        uint32_t rt = (0x1f)&(IFtoDE.Instruction >> 16);
+        uint32_t rt = (0x1f)&(IFtoDEout.Instruction >> 16);
 
         //rd is equal to the lower 5 bits of the hex instruction after it's shifted right 11 bits
-        uint32_t rd = (0x1f)&(IFtoDE.Instruction >> 11);
+        uint32_t rd = (0x1f)&(IFtoDEout.Instruction >> 11);
 
         //funct is equal to the lower 6 bits of the hex instruction
-        uint32_t funct = (0x3f)&(IFtoDE.Instruction);
+        uint32_t funct = (0x3f)&(IFtoDEout.Instruction);
 
         //immediate is equal to the lower 16 bits of the hex instruction
-        int32_t immediate = (0xffff)&(IFtoDE.Instruction);
+        int32_t immediate = (0xffff)&(IFtoDEout.Instruction);
 
         //If the immediate value is negative, sign extend it.
         if ((((immediate >> 15) & 0x1) == 1) && opcode != DECODE_ORI)
@@ -308,27 +349,27 @@ void pipe_stage_decode()
         }
 
         //address is equal to the lower 26 bits of the hex instruction
-        uint32_t address = (0x3ffffff)&(IFtoDE.Instruction);
+        uint32_t address = (0x3ffffff)&(IFtoDEout.Instruction);
 
-        DEtoEX.rs_Num = rs;
-        DEtoEX.rt_Num = rt;
-        DEtoEX.rd_Num = rd;
+        DEtoEXin.rs_Num = rs;
+        DEtoEXin.rt_Num = rt;
+        DEtoEXin.rd_Num = rd;
 
-        DEtoEX.immediate = immediate;
+        DEtoEXin.immediate = immediate;
 
         //If a load use hazard occurs
-        if (DEtoEX.MemRead && ((EXtoMEM.Reg_Rd == rs) || (EXtoMEM.Reg_Rd == rt)))
+        if (DEtoEXout.MemRead && ((EXtoMEMout.Reg_Rd == rs) || (EXtoMEMout.Reg_Rd == rt)))
         {
             //Insert a stall
             PC_Write = false;
-            IFtoDE.IFtoDE_Write = false;
+            IFtoDEin.IFtoDE_Write = false;
 
             //Clear the control values.
-            DEtoEX.RegWrite = false;
-            DEtoEX.MemtoReg = false;
-            DEtoEX.MemRead = false;
-            DEtoEX.MemWrite = false;
-            DEtoEX.ALUOperation = EXECUTE_NO_OP;
+            DEtoEXin.RegWrite = false;
+            DEtoEXin.MemtoReg = false;
+            DEtoEXin.MemRead = false;
+            DEtoEXin.MemWrite = false;
+            DEtoEXin.ALUOperation = EXECUTE_NO_OP;
 
             //Don't let the rest of the funtion change the control values.
             return;
@@ -341,238 +382,238 @@ void pipe_stage_decode()
             if (funct == DECODE_ADD)
             {
                 //Writing back to a register
-                DEtoEX.RegWrite = true;
+                DEtoEXin.RegWrite = true;
 
                 //Not writing memory back to a register
-                DEtoEX.MemtoReg = false;
+                DEtoEXin.MemtoReg = false;
 
                 //Not reading memory
-                DEtoEX.MemRead = false;
+                DEtoEXin.MemRead = false;
 
                 //Not writing to memory
-                DEtoEX.MemWrite = false;
+                DEtoEXin.MemWrite = false;
 
                 //Not unsigned
-                DEtoEX.Unsigned = false;
+                DEtoEXin.Unsigned = false;
 
                 //Doing an add operation
-                DEtoEX.ALUOperation = EXECUTE_ADD;
+                DEtoEXin.ALUOperation = EXECUTE_ADD;
 
                 //Using the reg 2 value
-                DEtoEX.ALUSrc = false;
+                DEtoEXin.ALUSrc = false;
 
                 //RS is reg 1
-                DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+                DEtoEXin.Reg_1 = CURRENT_STATE.REGS[rs];
 
                 //RT is reg 2
-                DEtoEX.Reg_2 = CURRENT_STATE.REGS[rt];
+                DEtoEXin.Reg_2 = CURRENT_STATE.REGS[rt];
 
                 //Writing back to RD
-                DEtoEX.RegDst = true;
+                DEtoEXin.RegDst = true;
 
             }
             else if (funct == DECODE_ADDU)
             {
                 //Writing back to a register
-                DEtoEX.RegWrite = true;
+                DEtoEXin.RegWrite = true;
 
                 //Not writing memory back to a register
-                DEtoEX.MemtoReg = false;
+                DEtoEXin.MemtoReg = false;
 
                 //Not reading memory
-                DEtoEX.MemRead = false;
+                DEtoEXin.MemRead = false;
 
                 //Not writing to memory
-                DEtoEX.MemWrite = false;
+                DEtoEXin.MemWrite = false;
 
                 //Is unsigned
-                DEtoEX.Unsigned = true;
+                DEtoEXin.Unsigned = true;
 
                 //Doing an add operation
-                DEtoEX.ALUOperation = EXECUTE_ADD;
+                DEtoEXin.ALUOperation = EXECUTE_ADD;
 
                 //Using the reg 2 value
-                DEtoEX.ALUSrc = false;
+                DEtoEXin.ALUSrc = false;
 
                 //RS is reg 1
-                DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+                DEtoEXin.Reg_1 = CURRENT_STATE.REGS[rs];
 
                 //RT is reg 2
-                DEtoEX.Reg_2 = CURRENT_STATE.REGS[rt];
+                DEtoEXin.Reg_2 = CURRENT_STATE.REGS[rt];
 
                 //Writing back to RD
-                DEtoEX.RegDst = true;
+                DEtoEXin.RegDst = true;
             }
             else if (funct == DECODE_SUB)
             {
                 //Writing back to a register
-                DEtoEX.RegWrite = true;
+                DEtoEXin.RegWrite = true;
 
                 //Not writing memory back to a register
-                DEtoEX.MemtoReg = false;
+                DEtoEXin.MemtoReg = false;
 
                 //Not reading memory
-                DEtoEX.MemRead = false;
+                DEtoEXin.MemRead = false;
 
                 //Not writing to memory
-                DEtoEX.MemWrite = false;
+                DEtoEXin.MemWrite = false;
 
                 //Not unsigned
-                DEtoEX.Unsigned = false;
+                DEtoEXin.Unsigned = false;
 
                 //Doing a sub operation
-                DEtoEX.ALUOperation = EXECUTE_SUB;
+                DEtoEXin.ALUOperation = EXECUTE_SUB;
 
                 //Using the reg 2 value
-                DEtoEX.ALUSrc = false;
+                DEtoEXin.ALUSrc = false;
 
                 //RS is reg 1
-                DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+                DEtoEXin.Reg_1 = CURRENT_STATE.REGS[rs];
 
                 //RT is reg 2
-                DEtoEX.Reg_2 = CURRENT_STATE.REGS[rt];
+                DEtoEXin.Reg_2 = CURRENT_STATE.REGS[rt];
 
                 //Writing back to RD
-                DEtoEX.RegDst = true;
+                DEtoEXin.RegDst = true;
             }
             else if (funct == DECODE_SUBU)
             {
                 //Writing back to a register
-                DEtoEX.RegWrite = true;
+                DEtoEXin.RegWrite = true;
 
                 //Not writing memory back to a register
-                DEtoEX.MemtoReg = false;
+                DEtoEXin.MemtoReg = false;
 
                 //Not reading memory
-                DEtoEX.MemRead = false;
+                DEtoEXin.MemRead = false;
 
                 //Not writing to memory
-                DEtoEX.MemWrite = false;
+                DEtoEXin.MemWrite = false;
 
                 //Is unsigned
-                DEtoEX.Unsigned = true;
+                DEtoEXin.Unsigned = true;
 
                 //Doing a sub operation
-                DEtoEX.ALUOperation = EXECUTE_SUB;
+                DEtoEXin.ALUOperation = EXECUTE_SUB;
 
                 //Using the reg 2 value
-                DEtoEX.ALUSrc = false;
+                DEtoEXin.ALUSrc = false;
 
                 //RS is reg 1
-                DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+                DEtoEXin.Reg_1 = CURRENT_STATE.REGS[rs];
 
                 //RT is reg 2
-                DEtoEX.Reg_2 = CURRENT_STATE.REGS[rt];
+                DEtoEXin.Reg_2 = CURRENT_STATE.REGS[rt];
 
                 //Writing back to RD
-                DEtoEX.RegDst = true;
+                DEtoEXin.RegDst = true;
             }
             else if (funct == DECODE_SLT)
             {
                 //Writing back to a register
-                DEtoEX.RegWrite = true;
+                DEtoEXin.RegWrite = true;
 
                 //Not writing memory back to a register
-                DEtoEX.MemtoReg = false;
+                DEtoEXin.MemtoReg = false;
 
                 //Not reading memory
-                DEtoEX.MemRead = false;
+                DEtoEXin.MemRead = false;
 
                 //Not writing to memory
-                DEtoEX.MemWrite = false;
+                DEtoEXin.MemWrite = false;
 
                 //Not unsigned
-                DEtoEX.Unsigned = false;
+                DEtoEXin.Unsigned = false;
 
                 //Doing a slt operation
-                DEtoEX.ALUOperation = EXECUTE_SLT;
+                DEtoEXin.ALUOperation = EXECUTE_SLT;
 
                 //Using the reg 2 value
-                DEtoEX.ALUSrc = false;
+                DEtoEXin.ALUSrc = false;
 
                 //RS is reg 1
-                DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+                DEtoEXin.Reg_1 = CURRENT_STATE.REGS[rs];
 
                 //RT is reg 2
-                DEtoEX.Reg_2 = CURRENT_STATE.REGS[rt];
+                DEtoEXin.Reg_2 = CURRENT_STATE.REGS[rt];
 
                 //Writing back to RD
-                DEtoEX.RegDst = true;
+                DEtoEXin.RegDst = true;
             }
             else if (funct == DECODE_SLTU)
             {
                 //Writing back to a register
-                DEtoEX.RegWrite = true;
+                DEtoEXin.RegWrite = true;
 
                 //Not writing memory back to a register
-                DEtoEX.MemtoReg = false;
+                DEtoEXin.MemtoReg = false;
 
                 //Not reading memory
-                DEtoEX.MemRead = false;
+                DEtoEXin.MemRead = false;
 
                 //Not writing to memory
-                DEtoEX.MemWrite = false;
+                DEtoEXin.MemWrite = false;
 
                 //Is unsigned
-                DEtoEX.Unsigned = true;
+                DEtoEXin.Unsigned = true;
 
                 //Doing a slt operation
-                DEtoEX.ALUOperation = EXECUTE_SLT;
+                DEtoEXin.ALUOperation = EXECUTE_SLT;
 
                 //Using the reg 2 value
-                DEtoEX.ALUSrc = false;
+                DEtoEXin.ALUSrc = false;
 
                 //RS is reg 1
-                DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+                DEtoEXin.Reg_1 = CURRENT_STATE.REGS[rs];
 
                 //RT is reg 2
-                DEtoEX.Reg_2 = CURRENT_STATE.REGS[rt];
+                DEtoEXin.Reg_2 = CURRENT_STATE.REGS[rt];
 
                 //Writing back to RD
-                DEtoEX.RegDst = true;
+                DEtoEXin.RegDst = true;
             }
             else
             {                         
-                if(IFtoDE.PC != 0)
+                if(IFtoDEout.PC != 0)
                 {
-                    DEtoEX.DataPathStop = true;
+                    DEtoEXin.DataPathStop = true;
                     PC_Write = false;
-                    IFtoDE.IFtoDE_Write = false;
+                    IFtoDEin.IFtoDE_Write = false;
                 }
 
                 //Clear the control values.
-                DEtoEX.RegWrite = false;
-                DEtoEX.MemtoReg = false;
-                DEtoEX.MemRead = false;
-                DEtoEX.MemWrite = false;
-                DEtoEX.ALUOperation = EXECUTE_NO_OP;
+                DEtoEXin.RegWrite = false;
+                DEtoEXin.MemtoReg = false;
+                DEtoEXin.MemRead = false;
+                DEtoEXin.MemWrite = false;
+                DEtoEXin.ALUOperation = EXECUTE_NO_OP;
             }
         }
         else if (opcode == DECODE_LUI)
         {
             //Writing back to a register
-            DEtoEX.RegWrite = true;
+            DEtoEXin.RegWrite = true;
 
             //Not writing memory back to a register
-            DEtoEX.MemtoReg = false;
+            DEtoEXin.MemtoReg = false;
 
             //Not reading memory
-            DEtoEX.MemRead = false;
+            DEtoEXin.MemRead = false;
 
             //Not writing to memory
-            DEtoEX.MemWrite = false;
+            DEtoEXin.MemWrite = false;
 
             //Doing a LU operation
-            DEtoEX.ALUOperation = EXECUTE_LU;
+            DEtoEXin.ALUOperation = EXECUTE_LU;
 
             //Using the immediate value
-            DEtoEX.ALUSrc = true;
+            DEtoEXin.ALUSrc = true;
 
             //RS is reg 1
-            DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+            DEtoEXin.Reg_1 = CURRENT_STATE.REGS[rs];
 
             //Writing back to RT
-            DEtoEX.RegDst = false;
+            DEtoEXin.RegDst = false;
         }
         else if (opcode == DECODE_ORI)
         {
@@ -580,202 +621,189 @@ void pipe_stage_decode()
             //immediate = immediate & 0xffff;
             
             //Writing back to a register
-            DEtoEX.RegWrite = true;
+            DEtoEXin.RegWrite = true;
 
             //Not writing memory back to a register
-            DEtoEX.MemtoReg = false;
+            DEtoEXin.MemtoReg = false;
 
             //Not reading memory
-            DEtoEX.MemRead = false;
+            DEtoEXin.MemRead = false;
 
             //Not writing to memory
-            DEtoEX.MemWrite = false;
+            DEtoEXin.MemWrite = false;
 
             //Doing an or operation
-            DEtoEX.ALUOperation = EXECUTE_OR;
+            DEtoEXin.ALUOperation = EXECUTE_OR;
 
             //Using the immediate value
-            DEtoEX.ALUSrc = true;
+            DEtoEXin.ALUSrc = true;
 
             //RS is reg 1
-            DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+            DEtoEXin.Reg_1 = CURRENT_STATE.REGS[rs];
 
             //Writing back to Rt
-            DEtoEX.RegDst = false;
+            DEtoEXin.RegDst = false;
         }
         else if (opcode == DECODE_ADDI)
         {
             //Writing back to a register
-            DEtoEX.RegWrite = true;
+            DEtoEXin.RegWrite = true;
 
             //Not writing memory back to a register
-            DEtoEX.MemtoReg = false;
+            DEtoEXin.MemtoReg = false;
 
             //Not reading memory
-            DEtoEX.MemRead = false;
+            DEtoEXin.MemRead = false;
 
             //Not writing to memory
-            DEtoEX.MemWrite = false;
+            DEtoEXin.MemWrite = false;
 
             //Not unsigned
-            DEtoEX.Unsigned = false;
+            DEtoEXin.Unsigned = false;
 
             //Doing a add operation
-            DEtoEX.ALUOperation = EXECUTE_ADD;
+            DEtoEXin.ALUOperation = EXECUTE_ADD;
 
             //Using the immediate value
-            DEtoEX.ALUSrc = true;
+            DEtoEXin.ALUSrc = true;
 
             //RS is reg 1
-            DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+            DEtoEXin.Reg_1 = CURRENT_STATE.REGS[rs];
 
             //Writing back to Rt
-            DEtoEX.RegDst = false;
+            DEtoEXin.RegDst = false;
         }
         else if (opcode == DECODE_ADDIU)
         {
             //Writing back to a register
-            DEtoEX.RegWrite = true;
+            DEtoEXin.RegWrite = true;
 
             //Not writing memory back to a register
-            DEtoEX.MemtoReg = false;
+            DEtoEXin.MemtoReg = false;
 
             //Not reading memory
-            DEtoEX.MemRead = false;
+            DEtoEXin.MemRead = false;
 
             //Not writing to memory
-            DEtoEX.MemWrite = false;
+            DEtoEXin.MemWrite = false;
 
             //Is unsigned
-            DEtoEX.Unsigned = true;
+            DEtoEXin.Unsigned = true;
 
             //Doing a add operation
-            DEtoEX.ALUOperation = EXECUTE_ADD;
+            DEtoEXin.ALUOperation = EXECUTE_ADD;
 
             //Using the immediate value
-            DEtoEX.ALUSrc = true;
+            DEtoEXin.ALUSrc = true;
 
             //RS is reg 1
-            DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+            DEtoEXin.Reg_1 = CURRENT_STATE.REGS[rs];
 
             //Writing back to Rt
-            DEtoEX.RegDst = false;
+            DEtoEXin.RegDst = false;
 
         }
         else if (opcode == DECODE_LW)
         {
             //Writing back to a register
-            DEtoEX.RegWrite = true;
+            DEtoEXin.RegWrite = true;
 
             //Writing memory back to a register
-            DEtoEX.MemtoReg = true;
+            DEtoEXin.MemtoReg = true;
 
             //Reading memory
-            DEtoEX.MemRead = true;
+            DEtoEXin.MemRead = true;
 
             //Not writing to memory
-            DEtoEX.MemWrite = false;
+            DEtoEXin.MemWrite = false;
 
             //Doing an mem operation
-            DEtoEX.ALUOperation = EXECUTE_MEM;
+            DEtoEXin.ALUOperation = EXECUTE_MEM;
 
             //Using the immediate value
-            DEtoEX.ALUSrc = true;
+            DEtoEXin.ALUSrc = true;
 
             //RS is reg 1
-            DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+            DEtoEXin.Reg_1 = CURRENT_STATE.REGS[rs];
 
             //Writing back to RT
-            DEtoEX.RegDst = false;
+            DEtoEXin.RegDst = false;
         }
         else if (opcode == DECODE_SW)
         {
             //Not writing back to a register
-            DEtoEX.RegWrite = false;
+            DEtoEXin.RegWrite = false;
 
             //Not Reading memory
-            DEtoEX.MemRead = false;
+            DEtoEXin.MemRead = false;
 
             //Writing to memory
-            DEtoEX.MemWrite = true;
+            DEtoEXin.MemWrite = true;
 
             //Doing an mem operation
-            DEtoEX.ALUOperation = EXECUTE_MEM;
+            DEtoEXin.ALUOperation = EXECUTE_MEM;
 
             //Using the immediate value
-            DEtoEX.ALUSrc = true;
+            DEtoEXin.ALUSrc = true;
 
             //RS is reg 1
-            DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+            DEtoEXin.Reg_1 = CURRENT_STATE.REGS[rs];
 
             //RT is reg 2
-            DEtoEX.Reg_2 = CURRENT_STATE.REGS[rt];
+            DEtoEXin.Reg_2 = CURRENT_STATE.REGS[rt];
         }
         else if (opcode == DECODE_BNE)
         {
             uint32_t R1 = CURRENT_STATE.REGS[rs];
             uint32_t R2 = CURRENT_STATE.REGS[rt];
 
-            //Reg 1 EX forwarding
-            if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rs))
+            //Reg 1 EX/MEM delay
+            if ((EXtoMEMin.RegWrite && (EXtoMEMin.Reg_Rd != 0) && (EXtoMEMin.Reg_Rd == rs)) ||
+                (MEMtoWBin.RegWrite && MEMtoWBin.Read_Data && (MEMtoWBin.Reg_Rd != 0) && (MEMtoWBin.Reg_Rd == rs)))
             {
                 //Insert a stall
                 PC_Write = false;
-                IFtoDE.IFtoDE_Write = false;
+                IFtoDEin.IFtoDE_Write = false;
 
                 //Clear the control values.
-                DEtoEX.RegWrite = false;
-                DEtoEX.MemtoReg = false;
-                DEtoEX.MemRead = false;
-                DEtoEX.MemWrite = false;
-                DEtoEX.ALUOperation = EXECUTE_NO_OP;
+                DEtoEXin.RegWrite = false;
+                DEtoEXin.MemtoReg = false;
+                DEtoEXin.MemRead = false;
+                DEtoEXin.MemWrite = false;
+                DEtoEXin.ALUOperation = EXECUTE_NO_OP;
 
                 //Don't let the rest of the funtion change the control values.
                 return;
             }
-            //Reg 1 MEM forwarding
-            else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
+            //Reg 1 EX forwarding
+            else if (EXtoMEMout.RegWrite && (EXtoMEMout.Reg_Rd != 0) && (EXtoMEMout.Reg_Rd == rs))
             {
-                if (MEMtoWB.MemtoReg)
-                {
-                    R1 = MEMtoWB.Read_Data;
-                }
+                R1 = EXtoMEMout.ALU_Result;
+            }
 
-                else
-                {
-                    R1 = MEMtoWB.ALU_Result;
-                }
+            //Reg 2 EX/MEM delay
+            if ((EXtoMEMin.RegWrite && (EXtoMEMin.Reg_Rd != 0) && (EXtoMEMin.Reg_Rd == rt)) ||
+                (MEMtoWBin.RegWrite && MEMtoWBin.Read_Data && (MEMtoWBin.Reg_Rd != 0) && (MEMtoWBin.Reg_Rd == rt)))
+            {
+                //Insert a stall
+                PC_Write = false;
+                IFtoDEin.IFtoDE_Write = false;
+
+                //Clear the control values.
+                DEtoEXin.RegWrite = false;
+                DEtoEXin.MemtoReg = false;
+                DEtoEXin.MemRead = false;
+                DEtoEXin.MemWrite = false;
+                DEtoEXin.ALUOperation = EXECUTE_NO_OP;
+
+                //Don't let the rest of the funtion change the control values.
+                return;
             }
 
             //Reg 2 EX forwarding
-            if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rt))
+            else if (EXtoMEMout.RegWrite && (EXtoMEMout.Reg_Rd != 0) && (EXtoMEMout.Reg_Rd == rt))
             {
-                //Insert a stall
-                PC_Write = false;
-                IFtoDE.IFtoDE_Write = false;
-
-                //Clear the control values.
-                DEtoEX.RegWrite = false;
-                DEtoEX.MemtoReg = false;
-                DEtoEX.MemRead = false;
-                DEtoEX.MemWrite = false;
-                DEtoEX.ALUOperation = EXECUTE_NO_OP;
-
-                //Don't let the rest of the funtion change the control values.
-                return;
-            }
-            //Reg 2 MEM forwarding
-            else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rt))
-            {
-                if (MEMtoWB.MemtoReg)
-                {
-                    R2 = MEMtoWB.Read_Data;
-                }
-
-                else
-                {
-                    R2 = MEMtoWB.ALU_Result;
-                }
+                R2 = EXtoMEMout.ALU_Result;
             }
 
             //If the branch is being taken
@@ -785,10 +813,10 @@ void pipe_stage_decode()
                 Branch = true;
 
                 //Mark the next instruction to be flushed
-                IFtoDE.IFFlush = true;
+                IFtoDEin.IFFlush = true;
 
                 //Make the PC point to the branch target
-                Branch_PC = IFtoDE.PC + (immediate << 2);
+                Branch_PC = IFtoDEout.PC + (immediate << 2);
             }
 
             else
@@ -798,11 +826,11 @@ void pipe_stage_decode()
             }
 
             //Clear the control values.
-            DEtoEX.RegWrite = false;
-            DEtoEX.MemtoReg = false;
-            DEtoEX.MemRead = false;
-            DEtoEX.MemWrite = false;
-            DEtoEX.ALUOperation = EXECUTE_NO_OP;
+            DEtoEXin.RegWrite = false;
+            DEtoEXin.MemtoReg = false;
+            DEtoEXin.MemRead = false;
+            DEtoEXin.MemWrite = false;
+            DEtoEXin.ALUOperation = EXECUTE_NO_OP;
 
         }
         else if (opcode == DECODE_BEQ)
@@ -810,68 +838,55 @@ void pipe_stage_decode()
             uint32_t R1 = CURRENT_STATE.REGS[rs];
             uint32_t R2 = CURRENT_STATE.REGS[rt];
 
-            //Reg 1 EX forwarding
-            if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rs))
+            //Reg 1 EX/MEM delay
+            if ((EXtoMEMin.RegWrite && (EXtoMEMin.Reg_Rd != 0) && (EXtoMEMin.Reg_Rd == rs)) ||
+                (MEMtoWBin.RegWrite && MEMtoWBin.Read_Data && (MEMtoWBin.Reg_Rd != 0) && (MEMtoWBin.Reg_Rd == rs)))
             {
                 //Insert a stall
                 PC_Write = false;
-                IFtoDE.IFtoDE_Write = false;
+                IFtoDEin.IFtoDE_Write = false;
 
                 //Clear the control values.
-                DEtoEX.RegWrite = false;
-                DEtoEX.MemtoReg = false;
-                DEtoEX.MemRead = false;
-                DEtoEX.MemWrite = false;
-                DEtoEX.ALUOperation = EXECUTE_NO_OP;
+                DEtoEXin.RegWrite = false;
+                DEtoEXin.MemtoReg = false;
+                DEtoEXin.MemRead = false;
+                DEtoEXin.MemWrite = false;
+                DEtoEXin.ALUOperation = EXECUTE_NO_OP;
 
                 //Don't let the rest of the funtion change the control values.
                 return;
             }
-            //Reg 1 MEM forwarding
-            else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
+            //Reg 1 EX forwarding
+            else if (EXtoMEMout.RegWrite && (EXtoMEMout.Reg_Rd != 0) && (EXtoMEMout.Reg_Rd == rs))
             {
-                if (MEMtoWB.MemtoReg)
-                {
-                    R1 = MEMtoWB.Read_Data;
-                }
+                R1 = EXtoMEMout.ALU_Result;
+            }
 
-                else
-                {
-                    R1 = MEMtoWB.ALU_Result;
-                }
+            //Reg 2 EX/MEM delay
+            if ((EXtoMEMin.RegWrite && (EXtoMEMin.Reg_Rd != 0) && (EXtoMEMin.Reg_Rd == rt)) ||
+                (MEMtoWBin.RegWrite && MEMtoWBin.Read_Data && (MEMtoWBin.Reg_Rd != 0) && (MEMtoWBin.Reg_Rd == rt)))
+            {
+                //Insert a stall
+                PC_Write = false;
+                IFtoDEin.IFtoDE_Write = false;
+
+                //Clear the control values.
+                DEtoEXin.RegWrite = false;
+                DEtoEXin.MemtoReg = false;
+                DEtoEXin.MemRead = false;
+                DEtoEXin.MemWrite = false;
+                DEtoEXin.ALUOperation = EXECUTE_NO_OP;
+
+                //Don't let the rest of the funtion change the control values.
+                return;
             }
 
             //Reg 2 EX forwarding
-            if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rt))
+            else if (EXtoMEMout.RegWrite && (EXtoMEMout.Reg_Rd != 0) && (EXtoMEMout.Reg_Rd == rt))
             {
-                //Insert a stall
-                PC_Write = false;
-                IFtoDE.IFtoDE_Write = false;
-
-                //Clear the control values.
-                DEtoEX.RegWrite = false;
-                DEtoEX.MemtoReg = false;
-                DEtoEX.MemRead = false;
-                DEtoEX.MemWrite = false;
-                DEtoEX.ALUOperation = EXECUTE_NO_OP;
-
-                //Don't let the rest of the funtion change the control values.
-                return;
+                R2 = EXtoMEMout.ALU_Result;
             }
-            //Reg 2 MEM forwarding
-            else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rt))
-            {
-                if (MEMtoWB.MemtoReg)
-                {
-                    R2 = MEMtoWB.Read_Data;
-                }
-
-                else
-                {
-                    R2 = MEMtoWB.ALU_Result;
-                }
-            }
-
+            
             //If the branch is being taken
             if (R1 == R2)
             {
@@ -879,10 +894,10 @@ void pipe_stage_decode()
                 Branch = true;
 
                 //Mark the next instruction to be flushed
-                IFtoDE.IFFlush = true;
+                IFtoDEin.IFFlush = true;
 
                 //Make the PC point to the branch target
-                Branch_PC = IFtoDE.PC + (immediate << 2);
+                Branch_PC = IFtoDEout.PC + (immediate << 2);
             }
 
             else
@@ -892,45 +907,38 @@ void pipe_stage_decode()
             }
 
             //Clear the control values.
-            DEtoEX.RegWrite = false;
-            DEtoEX.MemtoReg = false;
-            DEtoEX.MemRead = false;
-            DEtoEX.MemWrite = false;
-            DEtoEX.ALUOperation = EXECUTE_NO_OP;
+            DEtoEXin.RegWrite = false;
+            DEtoEXin.MemtoReg = false;
+            DEtoEXin.MemRead = false;
+            DEtoEXin.MemWrite = false;
+            DEtoEXin.ALUOperation = EXECUTE_NO_OP;
         }
         else if (opcode == DECODE_BGTZ)
         {
             uint32_t R1 = CURRENT_STATE.REGS[rs];
 
-            //Reg 1 EX forwarding
-            if (EXtoMEM.RegWrite && (EXtoMEM.Reg_Rd != 0) && (EXtoMEM.Reg_Rd == rs))
+            //Reg 1 EX/MEM delay
+            if ((EXtoMEMin.RegWrite && (EXtoMEMin.Reg_Rd != 0) && (EXtoMEMin.Reg_Rd == rs)) ||
+                (MEMtoWBin.RegWrite && MEMtoWBin.Read_Data && (MEMtoWBin.Reg_Rd != 0) && (MEMtoWBin.Reg_Rd == rs)))
             {
                 //Insert a stall
                 PC_Write = false;
-                IFtoDE.IFtoDE_Write = false;
+                IFtoDEin.IFtoDE_Write = false;
 
                 //Clear the control values.
-                DEtoEX.RegWrite = false;
-                DEtoEX.MemtoReg = false;
-                DEtoEX.MemRead = false;
-                DEtoEX.MemWrite = false;
-                DEtoEX.ALUOperation = EXECUTE_NO_OP;
+                DEtoEXin.RegWrite = false;
+                DEtoEXin.MemtoReg = false;
+                DEtoEXin.MemRead = false;
+                DEtoEXin.MemWrite = false;
+                DEtoEXin.ALUOperation = EXECUTE_NO_OP;
 
                 //Don't let the rest of the funtion change the control values.
                 return;
             }
-            //Reg 1 MEM forwarding
-            else if (MEMtoWB.RegWrite && (MEMtoWB.Reg_Rd != 0) && (MEMtoWB.Reg_Rd == rs))
+            //Reg 1 EX forwarding
+            else if (EXtoMEMout.RegWrite && (EXtoMEMout.Reg_Rd != 0) && (EXtoMEMout.Reg_Rd == rs))
             {
-                if (MEMtoWB.MemtoReg)
-                {
-                    R1 = MEMtoWB.Read_Data;
-                }
-
-                else
-                {
-                    R1 = MEMtoWB.ALU_Result;
-                }
+                R1 = EXtoMEMout.ALU_Result;
             }
 
             //If the branch is being taken
@@ -940,10 +948,10 @@ void pipe_stage_decode()
                 Branch = true;
 
                 //Mark the next instruction to be flushed
-                IFtoDE.IFFlush = true;
+                IFtoDEin.IFFlush = true;
 
                 //Make the PC point to the branch target
-                Branch_PC = IFtoDE.PC + (immediate << 2);
+                Branch_PC = IFtoDEout.PC + (immediate << 2);
             }
 
             else
@@ -953,40 +961,40 @@ void pipe_stage_decode()
             }
 
             //Clear the control values.
-            DEtoEX.RegWrite = false;
-            DEtoEX.MemtoReg = false;
-            DEtoEX.MemRead = false;
-            DEtoEX.MemWrite = false;
-            DEtoEX.ALUOperation = EXECUTE_NO_OP;
+            DEtoEXin.RegWrite = false;
+            DEtoEXin.MemtoReg = false;
+            DEtoEXin.MemRead = false;
+            DEtoEXin.MemWrite = false;
+            DEtoEXin.ALUOperation = EXECUTE_NO_OP;
         }
         else if (opcode == DECODE_SLTI)
         {
             //Writing back to a register
-            DEtoEX.RegWrite = true;
+            DEtoEXin.RegWrite = true;
 
             //Not writing memory back to a register
-            DEtoEX.MemtoReg = false;
+            DEtoEXin.MemtoReg = false;
 
             //Not reading memory
-            DEtoEX.MemRead = false;
+            DEtoEXin.MemRead = false;
 
             //Not writing to memory
-            DEtoEX.MemWrite = false;
+            DEtoEXin.MemWrite = false;
 
             //Not unsigned
-            DEtoEX.Unsigned = false;
+            DEtoEXin.Unsigned = false;
 
             //Doing a slt operation
-            DEtoEX.ALUOperation = EXECUTE_SLT;
+            DEtoEXin.ALUOperation = EXECUTE_SLT;
 
             //Using the immediate value
-            DEtoEX.ALUSrc = true;
+            DEtoEXin.ALUSrc = true;
 
             //RS is reg 1
-            DEtoEX.Reg_1 = CURRENT_STATE.REGS[rs];
+            DEtoEXin.Reg_1 = CURRENT_STATE.REGS[rs];
 
             //Writing back to Rt
-            DEtoEX.RegDst = false;
+            DEtoEXin.RegDst = false;
         }
         else if (opcode == DECODE_J)
         {
@@ -994,34 +1002,34 @@ void pipe_stage_decode()
             Branch = true;
 
             //Mark the next instruction to be flushed
-            IFtoDE.IFFlush = true;
+            IFtoDEin.IFFlush = true;
 
             //Move the program counter to the label.
-            Branch_PC = (IFtoDE.PC & 0xf0000000) | (address << 2);
+            Branch_PC = (IFtoDEout.PC & 0xf0000000) | (address << 2);
 
             //Clear the control values.
-            DEtoEX.RegWrite = false;
-            DEtoEX.MemtoReg = false;
-            DEtoEX.MemRead = false;
-            DEtoEX.MemWrite = false;
-            DEtoEX.ALUOperation = EXECUTE_NO_OP;
+            DEtoEXin.RegWrite = false;
+            DEtoEXin.MemtoReg = false;
+            DEtoEXin.MemRead = false;
+            DEtoEXin.MemWrite = false;
+            DEtoEXin.ALUOperation = EXECUTE_NO_OP;
 
         }
         else
         {
-            if (IFtoDE.PC != 0)
+            if (IFtoDEout.PC != 0)
             {
-                DEtoEX.DataPathStop = true;
+                DEtoEXin.DataPathStop = true;
                 PC_Write = false;
-                IFtoDE.IFtoDE_Write = false;
+                IFtoDEin.IFtoDE_Write = false;
             }
 
             //Clear the control values.
-            DEtoEX.RegWrite = false;
-            DEtoEX.MemtoReg = false;
-            DEtoEX.MemRead = false;
-            DEtoEX.MemWrite = false;
-            DEtoEX.ALUOperation = EXECUTE_NO_OP;
+            DEtoEXin.RegWrite = false;
+            DEtoEXin.MemtoReg = false;
+            DEtoEXin.MemRead = false;
+            DEtoEXin.MemWrite = false;
+            DEtoEXin.ALUOperation = EXECUTE_NO_OP;
 
         }
     }
@@ -1054,10 +1062,10 @@ void pipe_stage_fetch()
     }
 
     //If writing to the next stage's regester is enabled
-    if(IFtoDE.IFtoDE_Write)
+    if(IFtoDEin.IFtoDE_Write)
     {
-        IFtoDE.PC = Increament_PC;
-        IFtoDE.Instruction = instruction;
+        IFtoDEin.PC = Increament_PC;
+        IFtoDEin.Instruction = instruction;
     }
 }
 

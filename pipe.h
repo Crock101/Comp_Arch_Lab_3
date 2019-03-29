@@ -336,16 +336,24 @@ bool Branch;
 //The new PC from branch/jump instruction
 uint32_t Branch_PC;
 
+//Input of the Regester in between the IF and DE stages
+Pipe_Reg_IFtoDE IFtoDEin;
 //Regester in between the IF and DE stages
-Pipe_Reg_IFtoDE IFtoDE;
+Pipe_Reg_IFtoDE IFtoDEout;
 
-//Regester in between the DE and EX stages
-Pipe_Reg_DEtoEX DEtoEX;
+//Input of the Regester in between the DE and EX stages
+Pipe_Reg_DEtoEX DEtoEXin;
+//Output of the Regester in between the DE and EX stages
+Pipe_Reg_DEtoEX DEtoEXout;
 
-//Regester in between the EX and MEM stages
-Pipe_Reg_EXtoMEM EXtoMEM;
+//Input of the Regester in between the EX and MEM stages
+Pipe_Reg_EXtoMEM EXtoMEMin;
+//Output of the Regester in between the EX and MEM stages
+Pipe_Reg_EXtoMEM EXtoMEMout;
 
-//Regester in between the MEM and WB stages
-Pipe_Reg_MEMtoWB MEMtoWB;
+//Input of the Regester in between the MEM and WB stages
+Pipe_Reg_MEMtoWB MEMtoWBin;
+//Output of the Regester in between the MEM and WB stages
+Pipe_Reg_MEMtoWB MEMtoWBout;
 
 #endif
